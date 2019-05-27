@@ -4,14 +4,11 @@ import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cz.horak.app.model.Flight;
-import cz.horak.app.rule.AndRule;
-import cz.horak.app.rule.FlightRule;
-import cz.horak.app.rule.FlightStatusRule;
-import cz.horak.app.rule.OriginRule;
+import cz.horak.app.statistic.AverageFlightDelayFromToAirport;
 import cz.horak.app.statistic.FlightStatistic;
 import cz.horak.app.utils.ArchiveManager;
 import cz.horak.app.utils.FileDownloader;
+import cz.horak.app.utils.FlightCsvParser;
 
 public class App {
     
@@ -28,12 +25,6 @@ public class App {
         String sourceUrlParam = System.getProperty("url");
         String workingDirParam = System.getProperty("workingDir");
         
-        // Create rules to get only required rows
-        String aiport = airportParam != null ? airportParam : AIRPORT_DEFAULT;
-        FlightRule fromAirport = new OriginRule(aiport); 
-        FlightRule notCancelled = new FlightStatusRule(Flight.Status.NOT_CANCELLED);
-        FlightRule fromAirportAndNotCancelled = new AndRule(fromAirport, notCancelled);
-        
         AppConfig appConfig = AppConfig.createAppConfig(sourceUrlParam, workingDirParam);
         logger.info("Use the following " + appConfig);
         
@@ -41,10 +32,18 @@ public class App {
         
         ArchiveManager.uncompressBZip2(appConfig.getCompressedSource(), appConfig.getCsvFile());
         
-        FlightStatistic flightStatistic = FlightStatistic.createFlightStatistic(appConfig.getCsvFile());
-        double averageDelay = flightStatistic.getAverageDelayOfFlights(fromAirportAndNotCancelled);
+        // Create rules to get only required rows
+        String airport = airportParam != null ? airportParam : AIRPORT_DEFAULT;
+        FlightStatistic averageFlightStatiDelay = new AverageFlightDelayFromToAirport(airport);
         
-        logger.info("The average delay of the flights at aiport " + aiport + " was " + averageDelay);
+        FlightCsvParser flightStatistic = FlightCsvParser.createFlightCsvParser(appConfig.getCsvFile());
+        flightStatistic.processStatisticThroughFlights(averageFlightStatiDelay);
+        
+        long   numberOfFlights = averageFlightStatiDelay.getNumberOfFlights();
+        double averageDelay = averageFlightStatiDelay.getResult();
+        
+        logger.info("The number of from/to flights from " + airport + " were " + numberOfFlights + ".");
+        logger.info("Average delay was: " + averageDelay + " minutes.");
        
         System.exit(0);
     }
