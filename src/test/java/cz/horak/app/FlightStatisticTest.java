@@ -7,12 +7,9 @@ import java.io.File;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import cz.horak.app.model.Flight;
-import cz.horak.app.rule.AndRule;
-import cz.horak.app.rule.FlightRule;
-import cz.horak.app.rule.FlightStatusRule;
-import cz.horak.app.rule.OriginRule;
+import cz.horak.app.statistic.AverageFlightDelayFromToAirport;
 import cz.horak.app.statistic.FlightStatistic;
+import cz.horak.app.utils.FlightCsvParser;
 
 public class FlightStatisticTest 
 {
@@ -24,28 +21,28 @@ public class FlightStatisticTest
     }
     
     @Test
-    public void countingOfAverageDelayAtLaxAirportShouldReturnRightValue() {
+    public void countingOfAverageDelayToLaxAirportShouldReturnRightValue() {
         
-        FlightRule fromAirport = new OriginRule("LAX"); 
-        FlightRule notCancelled = new FlightStatusRule(Flight.Status.NOT_CANCELLED);
-        FlightRule fromAirportAndNotCancelled = new AndRule(fromAirport, notCancelled);
+        FlightStatistic averageFlightStatiDelay = new AverageFlightDelayFromToAirport("LAX");
         
-        FlightStatistic flightStatistic = FlightStatistic.createFlightStatistic(csvFile);
-        double averageDelay = flightStatistic.getAverageDelayOfFlights(fromAirportAndNotCancelled);
+        FlightCsvParser flightStatistic = FlightCsvParser.createFlightCsvParser(csvFile);
+        flightStatistic.processStatisticThroughFlights(averageFlightStatiDelay);
+        
+        double averageDelay = averageFlightStatiDelay.getResult();
 
-        assertEquals(50.5, averageDelay, "(109 + 0 - 2 + 95 / 4 must be 50.5)");
+        assertEquals(61.0, averageDelay, "(110 - 19 - 2 + 155 / 4 must be 61.0)");
  
     }
     
     @Test
     public void countingOfAverageDelayAtUnknownAirportShouldReturnZeroValue() {
         
-        FlightRule fromAirport = new OriginRule("XXXX"); 
-        FlightRule notCancelled = new FlightStatusRule(Flight.Status.NOT_CANCELLED);
-        FlightRule fromAirportAndNotCancelled = new AndRule(fromAirport, notCancelled);
+        FlightStatistic averageFlightStatiDelay = new AverageFlightDelayFromToAirport("XXXX");
         
-        FlightStatistic flightStatistic = FlightStatistic.createFlightStatistic(csvFile);
-        double averageDelay = flightStatistic.getAverageDelayOfFlights(fromAirportAndNotCancelled);
+        FlightCsvParser flightStatistic = FlightCsvParser.createFlightCsvParser(csvFile);
+        flightStatistic.processStatisticThroughFlights(averageFlightStatiDelay);
+        
+        double averageDelay = averageFlightStatiDelay.getResult();
 
         assertEquals(0, averageDelay, "(0 / 0 must be 0)");
  
