@@ -1,4 +1,4 @@
-package cz.horak.app.statistic;
+package cz.horak.app.utils;
 
 import java.io.File;
 import java.io.FileReader;
@@ -12,49 +12,36 @@ import org.slf4j.LoggerFactory;
 
 import cz.horak.app.exception.FailedToCountStatisticException;
 import cz.horak.app.model.Flight;
-import cz.horak.app.rule.FlightRule;
+import cz.horak.app.statistic.FlightStatistic;
 
-public class FlightStatistic {
+public class FlightCsvParser {
 
-    private static final Logger logger = LoggerFactory.getLogger(FlightStatistic.class);
+    private static final Logger logger = LoggerFactory.getLogger(FlightCsvParser.class);
     
     private final File sourceCsv;
     
-    private FlightStatistic(File sourceCsv) {
+    private FlightCsvParser(File sourceCsv) {
         super();
         this.sourceCsv = sourceCsv;
     }
     
-    public static FlightStatistic createFlightStatistic(File sourceCsv) {
-        return new FlightStatistic(sourceCsv);
+    public static FlightCsvParser createFlightCsvParser(File sourceCsv) {
+        return new FlightCsvParser(sourceCsv);
     }
 
-    public double getAverageDelayOfFlights(FlightRule criteria) {
+    public void processStatisticThroughFlights(FlightStatistic averageFlightDelay) {
 
-        long sumOfDelays = 0;
-        long numOfFlights = 0;
         Flight flight;
         try(CSVParser parser = new CSVParser(new FileReader(sourceCsv), CSVFormat.DEFAULT.withHeader())) {
             for (CSVRecord record : parser) {
-                flight = new Flight(record.get("Origin"), Integer.valueOf(record.get("Cancelled")));
-    
-                if (criteria.evaluate(flight)) {
-                    sumOfDelays += Long.valueOf(record.get("DepDelay"));
-                    numOfFlights++;
-                }
+                
+                flight = Flight.createFlight(record.get("Origin"), record.get("DepDelay"), record.get("Dest"), record.get("ArrDelay"), record.get("Cancelled"));
+                averageFlightDelay.processFlight(flight);
             }
         } catch (IOException e) {
             logger.error(e.getMessage());
             throw new FailedToCountStatisticException("Failed to parse the csv file: " + sourceCsv);
         }
 
-        double averageDelay = 0;
-        if(numOfFlights != 0l) {
-            averageDelay = (double) sumOfDelays / (double) numOfFlights;
-        }
-        
-        logger.info("Number of flights were: " + numOfFlights + " with average delay: " + averageDelay + " minutes.");
-
-        return averageDelay;
     }
 }
